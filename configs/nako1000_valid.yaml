@@ -1,0 +1,36 @@
+# Data Settings
+phase: valid
+anatomy: liver
+
+pickle_file_path: /home/kats/storage/staff/eytankats/projects/genseg/data/nako_10k/nako10k.pkl
+#pickle_file_path: /home/kats/storage/staff/eytankats/projects/genseg/data/nako_30/nako30_train_test_names.pkl
+
+#model_weight: /home/kats/storage/staff/eytankats/projects/genseg/experiments/202410282123_multilabel_basicunet_100/checkpoints/best_valid_dice.pth
+#model_weight: /home/kats/storage/staff/eytankats/projects/genseg/experiments/202410282133_multilabel_basicunet_1000/checkpoints/best_valid_dice.pth
+model_weight: /home/kats/storage/staff/eytankats/projects/genseg/experiments/202410282135_multilabel_basicunet_10000/checkpoints/best_valid_dice.pth
+#model_weight: /home/kats/storage/staff/eytankats/projects/genseg/experiments/202410311223_multilabel_basicunet_dropout03_10000/checkpoints/best_valid_dice.pth
+#model_weight: /home/kats/storage/staff/eytankats/projects/genseg/experiments/202410311224_multilabel_basicunet_dropout02_10000/checkpoints/best_valid_dice.pth
+#model_weight: /home/kats/storage/staff/eytankats/projects/genseg/experiments/202410311249_multilabel_basicunet_dropout01_10000/checkpoints/best_valid_dice.pth
+
+model_weight_vae: /home/kats/storage/staff/eytankats/projects/genseg/experiments/202410102210/checkpoints/best_valid_dice_vae.pth
+
+snapshot_path: /home/kats/storage/staff/eytankats/projects/genseg/experiments/202410282135_multilabel_basicunet_10000/test10k_offset
+save_seg_img_path: /home/kats/storage/staff/eytankats/projects/genseg/experiments/202410282135_multilabel_basicunet_10000/test10k_offset/predicted_masks
+
+# Valid Settings
+dropout: 0.0
+save_imgs: false
+GPUs: [0]
+num_workers: 4
+batch_size: 1
+seed: 2333
+
+# Model Settings
+in_channel: 4
+out_channels: 4
+num_res_blocks: 2
+ch: 32
+ch_mult: [1,2,4,4]
+
+# Loss Settings
+w_rec: 1
