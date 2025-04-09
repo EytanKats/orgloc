@@ -7,33 +7,28 @@ import nibabel as nib
 
 from tqdm import tqdm
 from PIL import Image
-from nibabel import processing
 from scipy.ndimage import zoom
 from scipy.ndimage import grey_opening, binary_opening
 
-DATA_SPLIT_FILE = '/home/kats/storage/staff/eytankats/projects/genseg/data/nako_10k/nako_dataset_split.json'
-IMAGES_PATTERN_1K = '/home/kats/storage/staff/eytankats/data/nako_1000/nii_allmod_stitched/**/inp.nii.gz'
-IMAGES_PATTERN_10K = '/home/kats/storage/staff/eytankats/data/nako_10k/stitched/**/inp.nii.gz'
-OUTPUT_IMAGE_DIR = '/home/kats/storage/staff/eytankats/data/nako_10k/depth_images_test/'
+DATA_SPLIT_FILE = '/home/kats/storage/staff/eytankats/data/nako_10k/nako_dataset_split.json'
+IMAGES_PATTERN = '/home/kats/storage/staff/eytankats/data/nako_10k/images_mri_stitched/**/inp.nii.gz'
+OUTPUT_IMAGE_DIR = '/home/kats/storage/staff/eytankats/data/nako_10k/images_depth'
+DATA_PARTITION = 'training'
 
 if not os.path.exists(OUTPUT_IMAGE_DIR):
     os.makedirs(OUTPUT_IMAGE_DIR)
 
-images_paths = sorted(glob.glob(IMAGES_PATTERN_10K) + glob.glob(IMAGES_PATTERN_1K))
+images_paths = sorted(glob.glob(IMAGES_PATTERN))
 images_ids = [image_path.split('/')[-2] for image_path in images_paths]
+partition_images_ids = [image_name[:6] for image_name in json.load(open(DATA_SPLIT_FILE))[DATA_PARTITION]]
 
-test_images_ids = [test_image_name[:6] for test_image_name in json.load(open(DATA_SPLIT_FILE))['test']]
+for image_id in tqdm(partition_images_ids):
 
-for test_image_id in tqdm(test_images_ids):
-
-    image_path = images_paths[images_ids.index(test_image_id)]
+    image_path = images_paths[images_ids.index(image_id)]
 
     # load image, resample and normalize it between 0 and 1
     img = nib.load(image_path).get_fdata()
     normalized_img = img / np.max(img)
-
-    # rescale image to 1.5x1.5x1.5
-    normalized_img = zoom(normalized_img, zoom=(300 / 320, 244 / 260, 631 / 316), order=1)
 
     # flip image
     normalized_img = np.flip(normalized_img, axis=1)
@@ -59,8 +54,11 @@ for test_image_id in tqdm(test_images_ids):
     # clean depth image by morphological opening
     depth_img = grey_opening(depth_img, size=(11, 11))
 
+    # rescale image to 1.5x1.5
+    depth_img = zoom(depth_img, zoom=(300 / 320, 631 / 316), order=1)
+
     # get output image path
-    image_output_path = os.path.join(OUTPUT_IMAGE_DIR, test_image_id + '.png')
+    image_output_path = os.path.join(OUTPUT_IMAGE_DIR, DATA_PARTITION,  image_id + '.png')
 
     # save depth image
     im = np.uint8(depth_img * 255)
