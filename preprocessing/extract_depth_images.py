@@ -26,8 +26,13 @@ for image_id in tqdm(partition_images_ids):
 
     image_path = images_paths[images_ids.index(image_id)]
 
-    # load image, resample and normalize it between 0 and 1
-    img = nib.load(image_path).get_fdata()
+    # load image and normalize it between 0 and 1
+    try:
+        img = nib.load(image_path).get_fdata()
+    except:
+        print(f'Cannot load {image_path}, skipping.')
+        continue
+
     normalized_img = img / np.max(img)
 
     # flip image
