@@ -18,7 +18,7 @@ DATA_SPLIT_FILE = '/home/kats/storage/staff/eytankats/data/nako_10k/nako_dataset
 LABELS_FILE = '/home/kats/storage/staff/eytankats/data/nako_10k/labels_aggregated.json'
 MASKS_PATTERN = '/home/kats/storage/staff/eytankats/data/nako_10k/masks_aggregated/*.nii.gz'
 OUTPUT_MASKS_DIR = '/home/kats/storage/staff/eytankats/data/nako_10k/masks_projection'
-DATA_PARTITION = 'training'
+DATA_PARTITION = 'validation'
 
 
 def process(idx, multi_lbl_msk, lbl, available_lbls):
@@ -49,7 +49,7 @@ os.makedirs(OUTPUT_MASKS_DIR, exist_ok=True)
 
 masks_paths = sorted(glob.glob(MASKS_PATTERN))
 masks_ids = [os.path.basename(mask_path)[:6] for mask_path in masks_paths]
-partition_masks_ids = [mask_name[:6] for mask_name in json.load(open(DATA_SPLIT_FILE))[DATA_PARTITION]][95:]
+partition_masks_ids = [mask_name[:6] for mask_name in json.load(open(DATA_SPLIT_FILE))[DATA_PARTITION]]
 
 available_labels = json.load(open(LABELS_FILE))["labels"]
 
