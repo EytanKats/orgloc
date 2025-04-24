@@ -86,6 +86,34 @@ organ_labels = [
     "uterus"
 ]
 
+selected_organ_labels = [
+    "spleen",
+    "kidney_right",
+    "kidney_left",
+    "gallbladder",
+    "liver",
+    "stomach",
+    "pancreas",
+    "trachea",
+    "urinary_bladder",
+    "sacrum",
+    "vertebrae_S1",
+    "vertebrae_L5",
+    "vertebrae_L4",
+    "vertebrae_L3",
+    "vertebrae_L2",
+    "vertebrae_L1",
+    "vertebrae_T12",
+    "vertebrae_T11",
+    "aorta",
+    "clavicula_left",
+    "clavicula_right",
+    "femur_left",
+    "femur_right",
+    "hip_left",
+    "hip_right",
+]
+
 fusion_map = [
     {"lung_left": [
         "lung_upper_lobe_left",
