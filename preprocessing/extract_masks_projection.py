@@ -12,7 +12,7 @@ from tqdm import tqdm
 from PIL import Image
 from joblib import Parallel, delayed
 
-from preprocessing.organ_labels import organ_labels, fusion_map
+from preprocessing.organ_labels import organ_labels
 
 DATA_SPLIT_FILE = '/home/kats/storage/staff/eytankats/data/nako_10k/nako_dataset_split.json'
 LABELS_FILE = '/home/kats/storage/staff/eytankats/data/nako_10k/labels_aggregated.json'
