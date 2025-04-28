@@ -54,7 +54,7 @@ for label in selected_organ_labels:
     df[f'cnt_{label}'] = cnt_list
 
 # save original dataframe
-df.to_csv(os.path.join(MASK_DIR, 'masks_info.csv'), index=False)
+df.to_csv(os.path.join(MASK_DIR, f'{PARTITION}_masks_info.csv'), index=False)
 print(f'Original number of data samples: {len(df)}')
 
 # filter data based on number of connected components
@@ -67,7 +67,7 @@ for label in selected_organ_labels:
     bottom_5_percent_threshold = df[f'area_{label}'].quantile(0.01)  # calculate the 5th percentile
     df = df[df[f'area_{label}'] > bottom_5_percent_threshold]
 print(f'area-filtered number of data samples: {len(df)}')
-df.to_csv(os.path.join(MASK_DIR, 'masks_filtered_info.csv'), index=False)
+df.to_csv(os.path.join(MASK_DIR, f'{PARTITION}_masks_filtered_info.csv'), index=False)
 
 
 
