@@ -235,8 +235,8 @@ def run_trainer() -> None:
                     best_valid_loss_dice = T_loss_Dice_valid
                     logging.info("Save best valid Loss Dice !")
 
-                save_name = "{}_iteration_{:0>6}.pth".format('model', iteration)
-                save_checkpoint(model, save_name, configs['output_path'])
+                # save_name = "{}_iteration_{:0>6}.pth".format('model', iteration)
+                # save_checkpoint(model, save_name, configs['output_path'])
 
                 logging.info('Current learning rate: {:.5f}'.format(scheduler.get_last_lr()[0]))
                 logging.info('best valid dice: {:.4f} at iteration: {}'.format(best_valid_dice, best_valid_dice_epoch))
