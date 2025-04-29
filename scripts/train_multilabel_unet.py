@@ -36,12 +36,12 @@ def arg_parse() -> argparse.ArgumentParser.parse_args:
 def run_trainer() -> None:
     args = arg_parse()
     configs = yaml.load(open(args.config), Loader=yaml.FullLoader)
-    configs['output_path'] = os.path.join(configs['output_path'], time.strftime('%Y%m%d%H%M', time.localtime(time.time())) + '_multilabel_attentionunet4_lr0001_10000')
+    configs['output_path'] = os.path.join(configs['output_path'], time.strftime('%Y%m%d%H%M', time.localtime(time.time())) + '_' + configs['experiment_id'])
     configs['log_path'] = os.path.join(configs['output_path'], 'logs')
 
     wandb.init(
         project="gen-seg",
-        name=os.path.basename('multilabel_attentionunet4_lr0001_10000'),
+        name=os.path.basename(configs['experiment_id']),
         config=configs
     )
 
