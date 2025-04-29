@@ -1,54 +1,33 @@
 import os
 import cv2
 import random
-import pickle
 import logging
 import numpy as np
+import pandas as pd
 import albumentations as A
+
 from PIL import Image
-from albumentations.pytorch import ToTensorV2
 from torch.utils.data import Dataset
+from albumentations.pytorch import ToTensorV2
 
-
-ANATOMIES = [
-    "femur_left",
-    "femur_right",
-    "heart",
-    "hip_left",
-    "hip_right",
-    "kidney_left",
-    "kidney_right",
-    "liver",
-    "lung_left",
-    "lung_right",
-    "pancreas",
-    "spleen",
-    "stomach",
-    "urinary_bladder",
-    "vertebrae"
-]
+from preprocessing.organ_labels import selected_organ_labels
 
 
 class Image_Dataset(Dataset):
-    def __init__(self, pickle_file_path, stage='train', num_examples=10000, iterations=None) -> None:
+    def __init__(self, data_file_path, images_dir, masks_dir, stage, num_examples=10000, iterations=None) -> None:
         super().__init__()
-        with open(pickle_file_path, 'rb') as file:
-            loaded_dict = pickle.load(file)
 
         self.mask_path = []
-        self.mask_smooth_path = []
-        self.img_path = os.path.join(os.path.dirname(pickle_file_path), 'images_depth')
-        for anatomy in ANATOMIES:
-            self.mask_path.append(os.path.join(os.path.dirname(pickle_file_path), 'masks_' + anatomy + '_depth'))
+        self.img_path = os.path.join(images_dir, stage)
+        for anatomy in selected_organ_labels:
+            self.mask_path.append(os.path.join(masks_dir, stage, anatomy))
 
         self.iterations = iterations
         self.img_size = 256
         self.stage = stage
-        self.name_list = loaded_dict[stage]['name_list'][:num_examples]
+        self.name_list = pd.read_csv(data_file_path)['id'].tolist()[:num_examples]
         self.transform = self.get_transforms()
         logging.info('{} set num: {}'.format(stage, len(self.name_list)))
-
-        del loaded_dict
 
     def get_transforms(self):
         if self.stage == 'train':
@@ -72,12 +51,12 @@ class Image_Dataset(Dataset):
         index = random.randint(0, len(self.name_list) - 1)
         name = self.name_list[index]
 
-        img_image = Image.open(os.path.join(self.img_path, name + '.png')).convert("RGB")
+        img_image = Image.open(os.path.join(self.img_path, name)).convert("RGB")
         img_data = np.array(img_image).astype(np.float32)
 
         seg_data = []
         for mask_path in self.mask_path:
-            seg_image = Image.open(os.path.join(mask_path, name + '.png')).convert("RGB")
+            seg_image = Image.open(os.path.join(mask_path, name)).convert("RGB")
             seg_data.append(np.array(seg_image).astype(np.float32))
 
         augmented = self.transform(image=img_data, masks=seg_data)

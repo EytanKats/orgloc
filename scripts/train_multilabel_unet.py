@@ -18,14 +18,17 @@ from monai.networks.nets.swin_unetr import SwinUNETR
 
 # Own Package
 from models.segformer import Segformer
-from data.multi_label_image_dataset import Image_Dataset, ANATOMIES
-from utils.tools import seed_reproducer, save_checkpoint, get_cuda, print_options
+from preprocessing.organ_labels import selected_organ_labels
+from data.multi_label_image_dataset import Image_Dataset
+
 from utils.get_logger import open_log
 from utils.lr_scheduler import LinearWarmupCosineAnnealingLR
+from utils.tools import seed_reproducer, save_checkpoint, get_cuda, print_options
+
 
 def arg_parse() -> argparse.ArgumentParser.parse_args:
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', default='./configs/nako1000_train.yaml', type=str, help='load the config file')
+    parser.add_argument('--config', default='../configs/nako1000_train.yaml', type=str, help='load the config file')
     args = parser.parse_args()
     return args
 
@@ -33,8 +36,8 @@ def arg_parse() -> argparse.ArgumentParser.parse_args:
 def run_trainer() -> None:
     args = arg_parse()
     configs = yaml.load(open(args.config), Loader=yaml.FullLoader)
-    configs['snapshot_path'] = os.path.join(configs['snapshot_path'], time.strftime('%Y%m%d%H%M', time.localtime(time.time())) + '_multilabel_attentionunet4_lr0001_10000')
-    configs['log_path'] = os.path.join(configs['snapshot_path'], 'logs')
+    configs['output_path'] = os.path.join(configs['output_path'], time.strftime('%Y%m%d%H%M', time.localtime(time.time())) + '_multilabel_attentionunet4_lr0001_10000')
+    configs['log_path'] = os.path.join(configs['output_path'], 'logs')
 
     wandb.init(
         project="gen-seg",
@@ -43,7 +46,7 @@ def run_trainer() -> None:
     )
 
     # Output folder and save fig folder
-    os.makedirs(configs['snapshot_path'], exist_ok=True)
+    os.makedirs(configs['output_path'], exist_ok=True)
     os.makedirs(configs['log_path'], exist_ok=True)
 
     # Set GPU ID
@@ -59,20 +62,20 @@ def run_trainer() -> None:
     print_options(configs)
 
     # Get data loader
-    train_dataset = Image_Dataset(configs['pickle_file_path'], stage='train', num_examples=configs['num_examples'], iterations=configs['iterations'] * configs['batch_size'])
-    valid_dataset = Image_Dataset(configs['pickle_file_path'], stage='val')
-    train_dataloader = DataLoader(train_dataset, batch_size=configs['batch_size'], pin_memory=True, drop_last=True, shuffle=True)
-    valid_dataloader = DataLoader(valid_dataset, batch_size=configs['batch_size'], pin_memory=True, drop_last=False, shuffle=False)
+    train_dataset = Image_Dataset(configs['train_data_file_path'], images_dir=configs['images_dir'], masks_dir=configs['masks_dir'], stage='training', num_examples=configs['num_examples'], iterations=configs['iterations'] * configs['batch_size'])
+    valid_dataset = Image_Dataset(configs['val_data_file_path'], images_dir=configs['images_dir'], masks_dir=configs['masks_dir'], stage='validation')
+    train_dataloader = DataLoader(train_dataset, batch_size=configs['batch_size'], num_workers=configs['num_workers'], pin_memory=True, drop_last=True, shuffle=True, )
+    valid_dataloader = DataLoader(valid_dataset, batch_size=configs['batch_size'], num_workers=configs['num_workers'], pin_memory=True, drop_last=False, shuffle=False)
 
     # Define networks
     if configs['model'] == 'basic_unet':
-        model = BasicUnet(spatial_dims=2, in_channels=3, out_channels=len(ANATOMIES), dropout=0.1)
+        model = BasicUnet(spatial_dims=2, in_channels=3, out_channels=len(selected_organ_labels), dropout=0.1)
     elif configs['model'] == 'attention_unet':
-        model = AttentionUnet(spatial_dims=2, in_channels=3, out_channels=len(ANATOMIES), channels=[32, 32, 64, 128, 256], strides=[2, 2, 2, 2, 2])
+        model = AttentionUnet(spatial_dims=2, in_channels=3, out_channels=len(selected_organ_labels), channels=[32, 32, 64, 128, 256], strides=[2, 2, 2, 2, 2])
     elif configs['model'] == 'swin_unet':
-        model = SwinUNETR(spatial_dims=2, img_size=256, in_channels=3, out_channels=len(ANATOMIES), depths=[2, 2, 2, 2, 2], num_heads=[3, 6, 12, 24, 24])
+        model = SwinUNETR(spatial_dims=2, img_size=256, in_channels=3, out_channels=len(selected_organ_labels), depths=[2, 2, 2, 2, 2], num_heads=[3, 6, 12, 24, 24])
     elif configs['model'] == 'segformer':
-        model = Segformer(num_classes=len(ANATOMIES))  # B0
+        model = Segformer(num_classes=len(selected_organ_labels))  # B0
         # model = Segformer(num_classes=len(ANATOMIES), dims=(64, 128, 320, 512), num_layers=(3, 3, 18, 3), decoder_dim=512)  # B3
     model = get_cuda(model)
 
@@ -102,7 +105,7 @@ def run_trainer() -> None:
         T_loss_CE_valid = []
 
         T_Dice_valid = {}
-        for anatomy in ANATOMIES:
+        for anatomy in selected_organ_labels:
             T_Dice_valid[anatomy] = []
 
         ### Training phase
@@ -128,7 +131,7 @@ def run_trainer() -> None:
             # plt.show()
 
             pred_seg = torch.nn.functional.sigmoid(model(get_cuda(img_rgb)))
-            loss_CE = configs['w_dice'] * ce_loss(pred_seg, get_cuda(seg_img))
+            loss_CE = configs['w_ce'] * ce_loss(pred_seg, get_cuda(seg_img))
             loss_Dice = configs['w_dice'] * dice_loss(pred_seg, get_cuda(seg_img))
 
             loss = loss_Dice + loss_CE
@@ -188,7 +191,7 @@ def run_trainer() -> None:
                         dice_raw = (2.0 * intersection) / denominator
                         dice_value = dice_raw.mean(dim=0)
 
-                        for anatomy_idx, anatomy in enumerate(ANATOMIES):
+                        for anatomy_idx, anatomy in enumerate(selected_organ_labels):
                             T_Dice_valid[anatomy].append(dice_value[anatomy_idx].item())
 
                         T_loss_valid.append(loss.item())
@@ -203,11 +206,11 @@ def run_trainer() -> None:
                 logging.info("loss: {:.4f}, loss_Dice: {:.4f}, loss_CE: {:.4f}".format(T_loss_valid, T_loss_Dice_valid, T_loss_CE_valid))
 
                 dice_mean = 0
-                for anatomy in ANATOMIES:
+                for anatomy in selected_organ_labels:
                     dice_mean += np.mean(T_Dice_valid[anatomy])
                     logging.info(f'dice {anatomy}: {np.mean(T_Dice_valid[anatomy]):.4f}')
                     wandb.log({f'val_dice_{anatomy}': np.mean(T_Dice_valid[anatomy])}, step=iteration)
-                dice_mean /= len(ANATOMIES)
+                dice_mean /= len(selected_organ_labels)
                 wandb.log({"val_dice_mean": dice_mean}, step=iteration)
 
                 wandb.log({"val_loss_dice": T_loss_Dice_valid}, step=iteration)
@@ -215,25 +218,25 @@ def run_trainer() -> None:
 
                 if dice_mean > best_valid_dice:
                     save_name = "best_valid_dice.pth"
-                    save_checkpoint(model, save_name, configs['snapshot_path'])
+                    save_checkpoint(model, save_name, configs['output_path'])
                     best_valid_dice = dice_mean
                     best_valid_dice_epoch = iteration
                     logging.info("Save best valid Dice !")
 
                 if T_loss_valid < best_valid_loss:
                     save_name = "best_valid_loss.pth"
-                    save_checkpoint(model, save_name, configs['snapshot_path'])
+                    save_checkpoint(model, save_name, configs['output_path'])
                     best_valid_loss = T_loss_valid
                     logging.info("Save best valid Loss All !")
 
                 if T_loss_Dice_valid < best_valid_loss_dice:
                     save_name = "best_valid_loss_dice.pth"
-                    save_checkpoint(model, save_name, configs['snapshot_path'])
+                    save_checkpoint(model, save_name, configs['output_path'])
                     best_valid_loss_dice = T_loss_Dice_valid
                     logging.info("Save best valid Loss Dice !")
 
                 save_name = "{}_iteration_{:0>6}.pth".format('model', iteration)
-                save_checkpoint(model, save_name, configs['snapshot_path'])
+                save_checkpoint(model, save_name, configs['output_path'])
 
                 logging.info('Current learning rate: {:.5f}'.format(scheduler.get_last_lr()[0]))
                 logging.info('best valid dice: {:.4f} at iteration: {}'.format(best_valid_dice, best_valid_dice_epoch))
@@ -248,7 +251,7 @@ def run_trainer() -> None:
                 T_loss_CE_valid = []
 
                 T_Dice_valid = {}
-                for anatomy in ANATOMIES:
+                for anatomy in selected_organ_labels:
                     T_Dice_valid[anatomy] = []
 
             iteration += 1

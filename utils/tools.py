@@ -163,7 +163,7 @@ def print_options(configs):
     logging.info(message)
 
     # save to the disk
-    file_name = os.path.join(configs['log_path'], '{}_configs.txt'.format(configs['phase']))
+    file_name = os.path.join(configs['log_path'], 'configs.txt')
     with open(file_name, 'wt') as opt_file:
         opt_file.write(message)
         opt_file.write('\n')
