@@ -5,25 +5,30 @@ test_data_file_path: /home/kats/storage/staff/eytankats/data/nako_10k/masks_proj
 images_dir: /home/kats/storage/staff/eytankats/data/nako_10k/images_depth/
 masks_dir: /home/kats/storage/staff/eytankats/data/nako_10k/masks_projection/
 output_path: /home/kats/storage/staff/eytankats/projects/orgloc/experiments/
+experiment_id: multilabel_basicunet_filteredaggmasksv1
 
-# Training Settings
+# Model choice
 model: basic_unet
 #model: attention_unet
 #model: swin_unet
 #model: segformer
 
+# Training settings
 num_examples: 10000
 iterations: 15001
 GPUs: [0]
 num_workers: 8
 batch_size: 16
 seed: 1987
-
-# Optimizer Settings
 lr: 0.001
-
-# Loss Settings
 w_ce: 1
 w_dice: 1
+
+# Test settings
+dropout: 0.0
+save_imgs: true
+test_experiment_id: 202504281709_multilabel_basicunet_filteredaggmasksv1
+test_checkpoint: best_valid_loss.pth
+
 
 
