@@ -28,7 +28,7 @@ from utils.tools import seed_reproducer, save_checkpoint, get_cuda, print_option
 
 def arg_parse() -> argparse.ArgumentParser.parse_args:
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', default='../configs/nako1000_train.yaml', type=str, help='load the config file')
+    parser.add_argument('--config', default='../configs/multilabel_basicunet_filteredaggmasksv1.yaml', type=str, help='load the config file')
     args = parser.parse_args()
     return args
 
