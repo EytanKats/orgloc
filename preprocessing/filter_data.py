@@ -7,11 +7,11 @@ from PIL import Image
 from tqdm import tqdm
 from scipy import ndimage
 
-from preprocessing.organ_labels import selected_organ_labels
+from preprocessing.organ_labels_v2 import selected_organ_labels
 
 
 IMAGE_DIR = '/home/kats/storage/staff/eytankats/data/nako_10k/images_depth'
-MASK_DIR = '/home/kats/storage/staff/eytankats/data/nako_10k/masks_projection'
+MASK_DIR = '/home/kats/storage/staff/eytankats/data/nako_10k/masks_projection_v2'
 PARTITION = 'training'
 
 # find data samples for which both image and mask are successfully extracted
@@ -23,7 +23,7 @@ mask_ids = [os.path.basename(n) for n in masks_paths]
 
 ids = list(set(image_ids) & set(mask_ids))
 
-# create data frame to keep onformation about masks
+# create data frame to keep information about masks
 df = pd.DataFrame({'id':ids})
 
 # iterate over masks of selected organs and calculate organ area and number of connected components

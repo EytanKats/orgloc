@@ -12,13 +12,13 @@ from tqdm import tqdm
 from PIL import Image
 from joblib import Parallel, delayed
 
-from preprocessing.organ_labels import organ_labels
+from preprocessing.organ_labels_v2 import organ_labels
 
 DATA_SPLIT_FILE = '/home/kats/storage/staff/eytankats/data/nako_10k/nako_dataset_split.json'
-LABELS_FILE = '/home/kats/storage/staff/eytankats/data/nako_10k/labels_aggregated.json'
-MASKS_PATTERN = '/home/kats/storage/staff/eytankats/data/nako_10k/masks_aggregated/*.nii.gz'
-OUTPUT_MASKS_DIR = '/home/kats/storage/staff/eytankats/data/nako_10k/masks_projection'
-DATA_PARTITION = 'validation'
+LABELS_FILE = '/home/kats/storage/staff/eytankats/data/nako_10k/labels_aggregated_v2.json'
+MASKS_PATTERN = '/home/kats/storage/staff/eytankats/data/nako_10k/masks_aggregated_v2/*.nii.gz'
+OUTPUT_MASKS_DIR = '/home/kats/storage/staff/eytankats/data/nako_10k/masks_projection_v2'
+DATA_PARTITION = 'test'
 
 
 def process(idx, multi_lbl_msk, lbl, available_lbls):
