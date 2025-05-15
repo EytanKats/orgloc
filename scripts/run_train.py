@@ -1,3 +1,7 @@
+import sys
+sys.path.append('./')
+sys.path.append('../')
+
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 
@@ -18,7 +22,7 @@ from monai.networks.nets.swin_unetr import SwinUNETR
 
 # Own Package
 from models.segformer import Segformer
-from preprocessing.organ_labels import selected_organ_labels
+from preprocessing.organ_labels_v2 import selected_organ_labels
 from data.multi_label_image_dataset import Image_Dataset
 
 from utils.get_logger import open_log
@@ -28,7 +32,7 @@ from utils.tools import seed_reproducer, save_checkpoint, get_cuda, print_option
 
 def arg_parse() -> argparse.ArgumentParser.parse_args:
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', default='../configs/multilabel_basicunet_filteredaggmasksv1.yaml', type=str, help='load the config file')
+    parser.add_argument('--config', default='../configs/multilabel_basicunet_filteredaggmasksv2.yaml', type=str, help='load the config file')
     args = parser.parse_args()
     return args
 
