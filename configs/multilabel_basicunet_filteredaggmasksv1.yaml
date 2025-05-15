@@ -1,9 +1,9 @@
 # Data Settings
-train_data_file_path: /home/kats/storage/staff/eytankats/data/nako_10k/masks_projection/training_masks_filtered_info.csv
-val_data_file_path: /home/kats/storage/staff/eytankats/data/nako_10k/masks_projection/validation_masks_filtered_info.csv
-test_data_file_path: /home/kats/storage/staff/eytankats/data/nako_10k/masks_projection/test_masks_filtered_info.csv
+train_data_file_path: /home/kats/storage/staff/eytankats/data/nako_10k/masks_projection_v1/training_masks_filtered_info.csv
+val_data_file_path: /home/kats/storage/staff/eytankats/data/nako_10k/masks_projection_v1/validation_masks_filtered_info.csv
+test_data_file_path: /home/kats/storage/staff/eytankats/data/nako_10k/masks_projection_v1/test_masks_filtered_info.csv
 images_dir: /home/kats/storage/staff/eytankats/data/nako_10k/images_depth/
-masks_dir: /home/kats/storage/staff/eytankats/data/nako_10k/masks_projection/
+masks_dir: /home/kats/storage/staff/eytankats/data/nako_10k/masks_projection_v1/
 output_path: /home/kats/storage/staff/eytankats/projects/orgloc/experiments/
 experiment_id: multilabel_basicunet_filteredaggmasksv1
 
