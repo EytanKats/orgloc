@@ -1,3 +1,7 @@
+import sys
+sys.path.append('./')
+sys.path.append('../')
+
 # Basic Package
 import torch
 import argparse
@@ -8,16 +12,15 @@ import os
 import pandas as pd
 from tabulate import tabulate
 
-from skimage.transform import resize
-from scipy.ndimage import zoom
 from tqdm import tqdm
 from PIL import Image
+from skimage.transform import resize
 from torch.utils.data import DataLoader
 from monai.networks.nets.basic_unet import BasicUnet
 
 # Own Package
 from data.multi_label_image_dataset import Image_Dataset
-from preprocessing.organ_labels import selected_organ_labels
+from preprocessing.organ_labels_v2 import selected_organ_labels
 
 from utils.get_logger import open_log
 from utils.tools import load_checkpoint, get_cuda, print_options, enable_dropout, mask_to_bbox
@@ -25,7 +28,7 @@ from utils.tools import load_checkpoint, get_cuda, print_options, enable_dropout
 
 def arg_parse() -> argparse.ArgumentParser.parse_args :
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', default='../configs/multilabel_basicunet_filteredaggmasksv1.yaml', type=str, help='load the config file')
+    parser.add_argument('--config', default='../configs/multilabel_basicunet_filteredaggmasksv2.yaml', type=str, help='load the config file')
     args = parser.parse_args()
     return args
 
@@ -92,7 +95,7 @@ def run_trainer() -> None:
     posterior['mean'] = []
 
     ### Validation phase
-    for batch_data in tqdm(test_dataloader, desc='Valid: '):
+    for batch_idx, batch_data in tqdm(enumerate(test_dataloader), desc='Valid: '):
         img_rgb = batch_data['img'] / 255.0
         img_rgb = 2. * img_rgb - 1.
 
@@ -160,7 +163,7 @@ def run_trainer() -> None:
 
                 # save images
                 pred_anatomy_thr = np.float32(pred_anatomy > 0.5)
-                if configs['save_imgs']:
+                if configs['save_imgs'] > 0 and configs['save_imgs'] > batch_idx:
 
                     img_to_plot = np.uint8(np.rot90(resize((img_rgb[0].permute(1, 2, 0).cpu().detach().numpy() + 1) / 2, (480, 948), order=1, mode='constant')) * 255)
                     seg_to_plot = np.uint8(np.rot90(seg_anatomy) * 255)

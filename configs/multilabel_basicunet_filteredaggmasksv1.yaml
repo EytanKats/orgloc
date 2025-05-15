@@ -26,7 +26,7 @@ w_dice: 1
 
 # Test settings
 dropout: 0.0
-save_imgs: true
+save_imgs: 10
 test_experiment_id: 202504281709_multilabel_basicunet_filteredaggmasksv1
 test_checkpoint: best_valid_loss.pth
 
