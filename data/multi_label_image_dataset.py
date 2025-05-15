@@ -7,10 +7,11 @@ import pandas as pd
 import albumentations as A
 
 from PIL import Image
+from scipy.ndimage import zoom
 from torch.utils.data import Dataset
 from albumentations.pytorch import ToTensorV2
 
-from preprocessing.organ_labels import selected_organ_labels
+from preprocessing.organ_labels_v2 import selected_organ_labels
 
 
 class Image_Dataset(Dataset):
@@ -57,6 +58,10 @@ class Image_Dataset(Dataset):
         seg_data = []
         for mask_path in self.mask_path:
             seg_image = Image.open(os.path.join(mask_path, name)).convert("RGB")
+            seg_image = np.array(seg_image).astype(np.float32)
+            seg_image = zoom(seg_image, zoom=(300 / 320, 631 / 316, 3/3), order=0)
+            seg_image = np.flip(seg_image, axis=0)
+
             seg_data.append(np.array(seg_image).astype(np.float32))
 
         augmented = self.transform(image=img_data, masks=seg_data)
