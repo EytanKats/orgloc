@@ -91,6 +91,27 @@ def mask_to_bbox(mask):
 
     return bbox
 
+
+def mask_to_bbox_v2(mask):
+    # Find non-zero indices
+    ys, xs = np.where(mask > 0)
+
+    if len(xs) == 0 or len(ys) == 0:
+        return None  # Empty mask, no bounding box
+
+    # Bounding box coordinates
+    x1 = np.min(xs)
+    y1 = np.min(ys)
+    x2 = np.max(xs)
+    y2 = np.max(ys)
+
+    return {
+        'x1': x1,
+        'y1': y1,
+        'x2': x2,
+        'y2': y2
+    }
+
 def get_iou(bb1, bb2):
     """
     Calculate the Intersection over Union (IoU) of two bounding boxes.

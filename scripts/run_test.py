@@ -23,7 +23,7 @@ from data.multi_label_image_dataset import Image_Dataset
 from preprocessing.organ_labels_v2 import selected_organ_labels
 
 from utils.get_logger import open_log
-from utils.tools import load_checkpoint, get_cuda, print_options, enable_dropout, mask_to_bbox
+from utils.tools import load_checkpoint, get_cuda, print_options, enable_dropout, mask_to_bbox_v2
 
 
 def arg_parse() -> argparse.ArgumentParser.parse_args :
@@ -135,8 +135,8 @@ def run_trainer() -> None:
                 seg_anatomy = resize(seg_img[0, anatomy_idx, :, :].detach().cpu().numpy(), (480, 948), order=0, mode='constant')
                 pred_anatomy = resize(pred_seg[0, anatomy_idx, :, :].detach().cpu().numpy(), (480, 948), order=1, mode='constant')
 
-                bbox_seg = mask_to_bbox(seg_anatomy)
-                bbox_pred = mask_to_bbox(np.uint8(pred_anatomy > 0.5))
+                bbox_seg = mask_to_bbox_v2(seg_anatomy)
+                bbox_pred = mask_to_bbox_v2(np.uint8(pred_anatomy > 0.5))
 
                 if bbox_seg is not None and bbox_pred is not None:
                     superior_anatomy = bbox_pred['x1'] - bbox_seg['x1']
