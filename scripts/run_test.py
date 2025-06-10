@@ -83,16 +83,16 @@ def run_trainer() -> None:
     left = {}
     right = {}
     superior = {}
-    posterior = {}
+    inferior = {}
     for anatomy in selected_organ_labels:
         left[anatomy] = []
         right[anatomy] = []
         superior[anatomy] = []
-        posterior[anatomy] = []
+        inferior[anatomy] = []
     left['mean'] = []
     right['mean'] = []
     superior['mean'] = []
-    posterior['mean'] = []
+    inferior['mean'] = []
 
     ### Validation phase
     for batch_idx, batch_data in tqdm(enumerate(test_dataloader), desc='Valid: '):
@@ -129,7 +129,7 @@ def run_trainer() -> None:
             left_mean = 0
             right_mean = 0
             superior_mean = 0
-            posterior_mean = 0
+            inferior_mean = 0
             for anatomy_idx, anatomy in enumerate(selected_organ_labels):
 
                 seg_anatomy = resize(seg_img[0, anatomy_idx, :, :].detach().cpu().numpy(), (480, 948), order=0, mode='constant')
@@ -139,15 +139,15 @@ def run_trainer() -> None:
                 bbox_pred = mask_to_bbox_v2(np.uint8(pred_anatomy > 0.5))
 
                 if bbox_seg is not None and bbox_pred is not None:
-                    superior_anatomy = bbox_pred['x1'] - bbox_seg['x1']
-                    left_anatomy = bbox_pred['y1'] - bbox_seg['y1']
-                    posterior_anatomy = bbox_pred['x2'] - bbox_seg['x2']
-                    right_anatomy = bbox_pred['y2'] - bbox_seg['y2']
+                    inferior_anatomy = bbox_seg['x1'] - bbox_pred['x1']
+                    right_anatomy = bbox_seg['y1'] - bbox_pred['y1']
+                    superior_anatomy = bbox_pred['x2'] - bbox_seg['x2']
+                    left_anatomy = bbox_pred['y2'] - bbox_seg['y2']
                 else:
                     left_anatomy = np.nan
                     right_anatomy = np.nan
                     superior_anatomy = np.nan
-                    posterior_anatomy = np.nan
+                    inferior_anatomy = np.nan
 
                 left[anatomy].append(left_anatomy)
                 left_mean += left_anatomy
@@ -158,8 +158,8 @@ def run_trainer() -> None:
                 superior[anatomy].append(superior_anatomy)
                 superior_mean += superior_anatomy
 
-                posterior[anatomy].append(posterior_anatomy)
-                posterior_mean += posterior_anatomy
+                inferior[anatomy].append(inferior_anatomy)
+                inferior_mean += inferior_anatomy
 
                 # save images
                 pred_anatomy_thr = np.float32(pred_anatomy > 0.5)
@@ -194,19 +194,19 @@ def run_trainer() -> None:
             left['mean'].append(left_mean / len(selected_organ_labels))
             right['mean'].append(right_mean / len(selected_organ_labels))
             superior['mean'].append(superior_mean / len(selected_organ_labels))
-            posterior['mean'].append(posterior_mean / len(selected_organ_labels))
+            inferior['mean'].append(inferior_mean / len(selected_organ_labels))
 
     # MEAN & Std Value
     name_list.extend(['Avg', 'Std'])
     left['mean'].extend([np.nanmean(left['mean']), np.nanstd(left['mean'], ddof=1)])
     right['mean'].extend([np.nanmean(right['mean']), np.nanstd(right['mean'], ddof=1)])
     superior['mean'].extend([np.nanmean(superior['mean']), np.nanstd(superior['mean'], ddof=1)])
-    posterior['mean'].extend([np.nanmean(posterior['mean']), np.nanstd(posterior['mean'], ddof=1)])
+    inferior['mean'].extend([np.nanmean(inferior['mean']), np.nanstd(inferior['mean'], ddof=1)])
     for anatomy_idx, anatomy in enumerate(selected_organ_labels):
         left[anatomy].extend([np.nanmean(left[anatomy]), np.nanstd(left[anatomy], ddof=1)])
         right[anatomy].extend([np.nanmean(right[anatomy]), np.nanstd(right[anatomy], ddof=1)])
         superior[anatomy].extend([np.nanmean(superior[anatomy]), np.nanstd(superior[anatomy], ddof=1)])
-        posterior[anatomy].extend([np.nanmean(posterior[anatomy]), np.nanstd(posterior[anatomy], ddof=1)])
+        inferior[anatomy].extend([np.nanmean(inferior[anatomy]), np.nanstd(inferior[anatomy], ddof=1)])
 
     # save csv
     csv_path = os.path.join(configs['output_path'], configs['test_experiment_id'], 'results.csv')
@@ -216,14 +216,14 @@ def run_trainer() -> None:
         'left_mean':  left['mean'],
         'right_mean': right['mean'],
         'superior_mean': superior['mean'],
-        'posterior_mean': posterior['mean']
+        'inferior_mean': inferior['mean']
     })
 
     for anatomy in selected_organ_labels:
         df['left_' + anatomy] = left[anatomy]
         df['right_' + anatomy] = right[anatomy]
         df['superior_' + anatomy] = superior[anatomy]
-        df['posterior_' + anatomy] = posterior[anatomy]
+        df['inferior_' + anatomy] = inferior[anatomy]
 
     df.to_csv(csv_path, index=False)
 
