@@ -23,7 +23,7 @@ from monai.networks.nets.swin_unetr import SwinUNETR
 # Own Package
 from models.segformer import Segformer
 from preprocessing.organ_labels_v2_volumetric import selected_organ_labels
-from data.multidim_dataset import Image_Dataset
+from data.multidim_singlelabel_dataset import Image_Dataset
 
 from utils.get_logger import open_log
 from utils.lr_scheduler import LinearWarmupCosineAnnealingLR
