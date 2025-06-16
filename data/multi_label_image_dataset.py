@@ -49,7 +49,7 @@ class Image_Dataset(Dataset):
 
     def __getitem__(self, index):
 
-        if self.stage == 'train':
+        if self.stage == 'training':
             index = random.randint(0, len(self.name_list) - 1)
 
         name = self.name_list[index]
