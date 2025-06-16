@@ -175,4 +175,11 @@ class BasicUNet(nn.Module):
         u1 = self.upcat_1(u2, c0)
 
         logits = self.final_conv(u1)
-        return u1, u2, u3, u4, logits
+        return logits
+
+# model = BasicUNet(in_channels=3, out_channels=1, dropout=0.1).cuda()
+# img = torch.rand((1, 3, 256, 256)).cuda()
+#
+# out = model(img)
+#
+# print('Finish script')
