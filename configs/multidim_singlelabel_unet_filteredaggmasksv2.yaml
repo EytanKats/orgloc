@@ -5,7 +5,7 @@ test_data_file_path: /home/eytan/storage/staff/eytankats/data/nako_10k/masks_pro
 images_dir: /home/eytan/storage/staff/eytankats/data/nako_10k/images_depth/
 masks_dir: /home/eytan/storage/staff/eytankats/data/nako_10k/masks_volumetric_v2/
 output_path: /home/eytan/storage/staff/eytankats/projects/orgloc/experiments/
-experiment_id: multidim_unet_aggmasksv2
+experiment_id: multidim_singlelabel_unet_aggmasksv2
 
 # Model choice
 model: basic_unet
