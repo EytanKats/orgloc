@@ -1,0 +1,35 @@
+# Data Settings
+train_data_file_path: /home/eytan/storage/staff/eytankats/data/nako_10k/masks_projection_v2/training_masks_filtered_info.csv
+val_data_file_path: /home/eytan/storage/staff/eytankats/data/nako_10k/masks_projection_v2/validation_masks_filtered_info.csv
+test_data_file_path: /home/eytan/storage/staff/eytankats/data/nako_10k/masks_projection_v2/test_masks_filtered_info.csv
+images_dir: /home/eytan/storage/staff/eytankats/data/nako_10k/images_depth/
+masks_pattern: /home/eytan/storage/staff/eytankats/data/nako_10k/masks_aggregated_v2/*.nii.gz
+labels_file: /home/eytan/storage/staff/eytankats/data/nako_10k/labels_aggregated_v2.json
+output_path: /home/eytan/storage/staff/eytankats/projects/orgloc/experiments/
+experiment_id: multidim_multilabel_unet_filtered_aggmasksv2
+
+# Model choice
+model: basic_unet
+#model: attention_unet
+#model: swin_unet
+#model: segformer
+
+# Training settings
+num_examples: 10000
+iterations: 15001
+GPUs: [0]
+num_workers: 8
+batch_size: 8
+seed: 1987
+lr: 0.001
+w_ce: 1
+w_dice: 1
+
+# Test settings
+dropout: 0.0
+save_imgs: 10
+test_experiment_id: 202505141433_multilabel_basicunet_filteredaggmasksv2
+test_checkpoint: best_valid_loss.pth
+
+
+
