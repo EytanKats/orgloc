@@ -112,6 +112,30 @@ def mask_to_bbox_v2(mask):
         'y2': y2
     }
 
+def mask_to_bbox_volumetric(mask):
+    # Find non-zero indices
+    zs, ys, xs = np.where(mask > 0)
+
+    if len(xs) == 0 or len(ys) == 0 or len(zs) == 0:
+        return None  # Empty mask, no bounding box
+
+    # Bounding box coordinates
+    z1 = np.min(zs)
+    x1 = np.min(xs)
+    y1 = np.min(ys)
+    z2 = np.max(zs)
+    x2 = np.max(xs)
+    y2 = np.max(ys)
+
+    return {
+        'x1': x1,
+        'y1': y1,
+        'z1': z1,
+        'x2': x2,
+        'y2': y2,
+        'z2': z2
+    }
+
 def get_iou(bb1, bb2):
     """
     Calculate the Intersection over Union (IoU) of two bounding boxes.
