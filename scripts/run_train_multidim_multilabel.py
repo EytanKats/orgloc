@@ -16,13 +16,13 @@ import wandb
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from monai.losses.dice import DiceCELoss
-from models.unet_multidim import BasicUNet
 from monai.networks.utils import one_hot
 from monai.networks.nets.attentionunet import AttentionUnet
 from monai.networks.nets.swin_unetr import SwinUNETR
 
 # Own Package
 from models.segformer import Segformer
+from models.unet_multidim import BasicUNet
 from preprocessing.organ_labels_v2_volumetric import selected_organ_labels
 from data.multidim_multilabel_dataset import Image_Dataset
 
