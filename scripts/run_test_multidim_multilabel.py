@@ -220,7 +220,7 @@ def run_trainer() -> None:
                     nib.save(seg_anatomy_nib, os.path.join(configs['predictions_path'], name[:-4] + '_' + anatomy + '_gt.nii.gz'))
 
                     img_to_plot = np.uint8(np.rot90(resize((img_rgb[0].permute(1, 2, 0).cpu().detach().numpy() + 1) / 2, (480, 948), order=1, mode='constant')) * 255)
-                    img.save(os.path.join(configs['predictions_path'], name + '.png'))
+                    img_to_plot.save(os.path.join(configs['predictions_path'], name + '.png'))
 
             left['mean'].append(left_mean / len(selected_organ_labels))
             right['mean'].append(right_mean / len(selected_organ_labels))
