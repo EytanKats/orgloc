@@ -25,6 +25,9 @@ def process(mask_id, masks_ids, available_labels, organ_labels):
 
     print(f'Processing mask {mask_id}')
 
+    if os.path.exists(os.path.join(OUTPUT_MASKS_DIR, mask_id + '.nii.gz')):
+        return
+
     mask_path = masks_paths[masks_ids.index(mask_id)]
 
     # load multilabel mask
