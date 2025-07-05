@@ -14,6 +14,7 @@ import pandas as pd
 import nibabel as nib
 from tabulate import tabulate
 
+from scipy import ndimage
 from tqdm import tqdm
 from PIL import Image
 from skimage.transform import resize
@@ -31,9 +32,30 @@ from utils.tools import load_checkpoint, get_cuda, print_options, enable_dropout
 
 def arg_parse() -> argparse.ArgumentParser.parse_args :
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', default='../configs/multidim_multilabel_unet_filteredaggmasksv2.yaml', type=str, help='load the config file')
+    parser.add_argument('--config', default='../configs/multidim_multilabel_unet_processedmasksv2.yaml', type=str, help='load the config file')
     args = parser.parse_args()
     return args
+
+
+def remove_small_cc(mask, num_cc):
+
+    struct = ndimage.generate_binary_structure(rank=3, connectivity=6)
+    labels, num = ndimage.label(mask, structure=struct)
+
+    if num == 0 or num_cc >= num:
+        return mask
+
+    # Compute voxel counts for each label
+    counts = ndimage.sum(np.ones_like(labels, dtype=np.int64), labels, index=np.arange(1, num + 1))
+    counts = counts.astype(np.int64)
+
+    # Find labels of the n largest components
+    keep = np.argsort(counts)[-num_cc:] + 1  # +1 because labels start at 1
+
+    # Build mask of voxels to preserve
+    organ_mask = np.isin(labels, keep)
+
+    return organ_mask
 
 
 def get_overlay(image, mask_1, mask_2, alpha=0.5):
@@ -136,16 +158,16 @@ def run_trainer() -> None:
 
             # Save resized volume
             if configs['save_imgs'] > 0 and configs['save_imgs'] > batch_idx:
-                volume_path = os.path.join(configs['volumes_dir'], name[:-4], 'wat.nii.gz')
+                volume_path = os.path.join(configs['volumes_dir'], name, 'wat.nii.gz')
                 volume = nib.load(volume_path).get_fdata()
 
-                # volume = np.flip(volume, axis=1)
-                volume = np.flip(volume, axis=0)
+                volume = np.flip(volume, axis=1)
+                # volume = np.flip(volume, axis=0)
                 volume = torch.from_numpy(volume.copy()).float().permute(1, 0, 2)
                 volume = pred_resize_transform(volume.unsqueeze(0)).squeeze().numpy()
                 volume = nib.Nifti1Image(volume, np.eye(4))
 
-                nib.save(volume, os.path.join(configs['predictions_path'], name[:-4] + '_vol.nii.gz'))
+                nib.save(volume, os.path.join(configs['predictions_path'], name + '_vol.nii.gz'))
 
             # Calculate metrics
             left_mean = 0
@@ -165,8 +187,18 @@ def run_trainer() -> None:
                 seg_anatomy = gt_resize_transform(seg_anatomy.unsqueeze(0)).squeeze().numpy()
                 pred_anatomy = pred_resize_transform(pred_anatomy.unsqueeze(0)).squeeze().detach().cpu().numpy()
 
+                ### Fill holes
+                pred_anatomy = ndimage.binary_fill_holes(np.uint8(pred_anatomy > 0.5))
+
+                ### Remove small connected components
+                if anatomy == 'thyroid_gland':
+                    n = 2
+                else:
+                    n = 1
+                pred_anatomy = remove_small_cc(pred_anatomy, num_cc=n)
+
                 bbox_seg = mask_to_bbox_volumetric(seg_anatomy)
-                bbox_pred = mask_to_bbox_volumetric(np.uint8(pred_anatomy > 0.5))
+                bbox_pred = mask_to_bbox_volumetric(pred_anatomy)
 
                 if bbox_seg is not None and bbox_pred is not None:
                     inferior_anatomy = bbox_seg['x1'] - bbox_pred['x1']
@@ -211,15 +243,16 @@ def run_trainer() -> None:
                     combined_anatomy[(pred_anatomy_thr == 1) & (combined_anatomy != 3)] = 2
 
                     combined_anatomy_nib = nib.Nifti1Image(combined_anatomy.astype(np.float32), np.eye(4))
-                    nib.save(combined_anatomy_nib, os.path.join(configs['predictions_path'], name[:-4] + '_' + anatomy + '_cmb.nii.gz'))
+                    nib.save(combined_anatomy_nib, os.path.join(configs['predictions_path'], name + '_' + anatomy + '_cmb.nii.gz'))
 
                     pred_anatomy_nib = nib.Nifti1Image(pred_anatomy_thr.astype(np.float32), np.eye(4))
-                    nib.save(pred_anatomy_nib, os.path.join(configs['predictions_path'], name[:-4] + '_' + anatomy + '_pred.nii.gz'))
+                    nib.save(pred_anatomy_nib, os.path.join(configs['predictions_path'], name + '_' + anatomy + '_pred.nii.gz'))
 
                     seg_anatomy_nib = nib.Nifti1Image(seg_anatomy, np.eye(4))
-                    nib.save(seg_anatomy_nib, os.path.join(configs['predictions_path'], name[:-4] + '_' + anatomy + '_gt.nii.gz'))
+                    nib.save(seg_anatomy_nib, os.path.join(configs['predictions_path'], name + '_' + anatomy + '_gt.nii.gz'))
 
                     img_to_plot = np.uint8(np.rot90(resize((img_rgb[0].permute(1, 2, 0).cpu().detach().numpy() + 1) / 2, (480, 948), order=1, mode='constant')) * 255)
+                    img_to_plot = Image.fromarray(img_to_plot.astype(np.uint8))
                     img_to_plot.save(os.path.join(configs['predictions_path'], name + '.png'))
 
             left['mean'].append(left_mean / len(selected_organ_labels))
