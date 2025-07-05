@@ -33,7 +33,7 @@ from utils.tools import seed_reproducer, save_checkpoint, get_cuda, print_option
 
 def arg_parse() -> argparse.ArgumentParser.parse_args:
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', default='../configs/multidim_multilabel_unet_filteredaggmasksv2.yaml', type=str, help='load the config file')
+    parser.add_argument('--config', default='../configs/multidim_multilabel_unet_processedmasksv2.yaml', type=str, help='load the config file')
     args = parser.parse_args()
     return args
 
@@ -68,9 +68,9 @@ def run_trainer() -> None:
 
     # Get data loader
     train_dataset = Image_Dataset(configs['train_data_file_path'], images_dir=configs['images_dir'], masks_pattern=configs['masks_pattern'], labels_file=configs['labels_file'], stage='training', num_examples=configs['num_examples'], iterations=configs['iterations'] * configs['batch_size'])
-    valid_dataset = Image_Dataset(configs['val_data_file_path'], images_dir=configs['images_dir'], masks_pattern=configs['masks_pattern'], labels_file=configs['labels_file'], stage='validation')
+    valid_dataset = Image_Dataset(configs['val_data_file_path'], images_dir=configs['images_dir'], masks_pattern=configs['masks_pattern'], labels_file=configs['labels_file'], stage='validation', num_examples=20)
     train_dataloader = DataLoader(train_dataset, batch_size=configs['batch_size'], num_workers=configs['num_workers'], pin_memory=True, drop_last=True, shuffle=True, )
-    valid_dataloader = DataLoader(valid_dataset, batch_size=configs['batch_size'], num_workers=configs['num_workers'], pin_memory=True, drop_last=False, shuffle=False)
+    valid_dataloader = DataLoader(valid_dataset, batch_size=4, num_workers=configs['num_workers'], pin_memory=True, drop_last=False, shuffle=False)
 
     # Define networks
     if configs['model'] == 'basic_unet':
@@ -160,7 +160,6 @@ def run_trainer() -> None:
                         loss= loss_DICE_CE(pred_seg, get_cuda(seg_img))
 
                         # calc dice
-
                         seg_img = one_hot(seg_img, len(selected_organ_labels) + 1)
 
                         pred_seg = torch.nn.functional.threshold(pred_seg,0.5, 0.).cpu()
