@@ -116,7 +116,6 @@ selected_organ_labels = [
     "femur_right",
     "hip_left",
     "hip_right",
-    # "sternum",
     "sacrum",
     "vertebrae_L5",
     "vertebrae_L4",
@@ -137,6 +136,5 @@ selected_organ_labels = [
     "vertebrae_T1",
     "vertebrae_C7",
     "vertebrae_C6",
-    # "costal_cartilages",
     "heart"
 ]
