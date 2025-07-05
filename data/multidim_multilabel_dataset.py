@@ -33,7 +33,7 @@ class Image_Dataset(Dataset):
         self.iterations = iterations
         self.img_size = 256
         self.stage = stage
-        self.name_list = pd.read_csv(data_file_path)['id'].tolist()[:num_examples]
+        self.name_list = pd.read_csv(data_file_path, dtype=str)['id'].tolist()[:num_examples]
         self.transform = self.get_transforms()
         logging.info('{} set num: {}'.format(stage, len(self.name_list)))
 
@@ -61,11 +61,11 @@ class Image_Dataset(Dataset):
 
         name = self.name_list[index]
 
-        img_image = Image.open(os.path.join(self.img_path, name)).convert("RGB")
+        img_image = Image.open(os.path.join(self.img_path, name + '.png')).convert("RGB")
         img_data = np.array(img_image).astype(np.float32)
 
         # load multilabel mask
-        multilabel_mask = nib.load(self.masks_map[name[:-4]]).get_fdata()
+        multilabel_mask = nib.load(self.masks_map[name]).get_fdata()
 
         # flip mask
         multilabel_mask = np.flip(multilabel_mask, axis=1)
