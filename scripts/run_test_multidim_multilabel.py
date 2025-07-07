@@ -237,7 +237,7 @@ def run_trainer() -> None:
                 pred_anatomy_thr = np.float32(pred_anatomy > 0.5)
                 if configs['save_imgs'] > 0 and configs['save_imgs'] > batch_idx:
 
-                    combined_anatomy = np.zeros_like(pred_anatomy)
+                    combined_anatomy = np.zeros_like(pred_anatomy, dtype=np.uint8)
                     combined_anatomy[(pred_anatomy_thr == 1) & (seg_anatomy == 1)] = 3
                     combined_anatomy[(seg_anatomy == 1) & (combined_anatomy != 3)] = 1
                     combined_anatomy[(pred_anatomy_thr == 1) & (combined_anatomy != 3)] = 2
