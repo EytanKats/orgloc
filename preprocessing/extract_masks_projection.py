@@ -12,7 +12,7 @@ from tqdm import tqdm
 from PIL import Image
 from joblib import Parallel, delayed
 
-from preprocessing.organ_labels_v2 import organ_labels
+from preprocessing.organ_labels_v2_volumetric import organ_labels
 
 DATA_SPLIT_FILE = '/home/kats/storage/staff/eytankats/data/nako_10k/nako_dataset_split.json'
 LABELS_FILE = '/home/kats/storage/staff/eytankats/data/nako_10k/labels_aggregated_v2.json'
@@ -22,6 +22,15 @@ DATA_PARTITION = 'test'
 
 
 def process(idx, multi_lbl_msk, lbl, available_lbls):
+
+    # get output mask directory and path
+    mask_output_dir = os.path.join(OUTPUT_MASKS_DIR, DATA_PARTITION, lbl)
+    os.makedirs(mask_output_dir, exist_ok=True)
+
+    mask_output_path = os.path.join(mask_output_dir, idx + '.png')
+    if os.path.exists(mask_output_path):
+        return
+
     organ_label_idx = available_lbls[lbl]
 
     # get mask of single organ
@@ -33,17 +42,10 @@ def process(idx, multi_lbl_msk, lbl, available_lbls):
     depth_organ_mask = depth_organ_mask / multi_lbl_msk.shape[1]
     depth_organ_mask[depth_organ_mask > 0] = 1 - depth_organ_mask[depth_organ_mask > 0]
 
-    # get output mask directory and path
-    mask_output_dir = os.path.join(OUTPUT_MASKS_DIR, DATA_PARTITION, lbl)
-    os.makedirs(mask_output_dir, exist_ok=True)
-
-    mask_output_path = os.path.join(mask_output_dir, idx + '.png')
-
     # save organ depth image
     im = np.uint8(depth_organ_mask * 255)
     im = Image.fromarray(im)
     im.save(mask_output_path)
-
 
 os.makedirs(OUTPUT_MASKS_DIR, exist_ok=True)
 
