@@ -89,13 +89,55 @@ def run_trainer() -> None:
     scheduler = LinearWarmupCosineAnnealingLR(optimizer, warmup_epochs=1000, max_epochs=configs['iterations'])
 
     # Define loss functions
-    loss_DICE_CE = DiceCELoss(include_background=False, to_onehot_y=True)
+    weight = torch.tensor([
+        1, # "background",
+        3, # "spleen",
+        5, # "kidney_right",
+        5, # "kidney_left",
+        1.5, # "liver",
+        1.5, # "stomach",
+        2, # "pancreas",
+        1.5, # "lung_right",
+        1.5, # "lung_left",
+        5, # "trachea",
+        10, # "thyroid_gland",
+        2, # "duodenum",
+        1.5, # "urinary_bladder",
+        2, # "aorta",
+        5, # "scapula_left",
+        5, # "scapula_right",
+        10, # "clavicula_left",
+        10, # "clavicula_right",
+        2, # "femur_left",
+        2, # "femur_right",
+        2, # "hip_left",
+        2, # "hip_right",
+        2, # "sacrum",
+        5, # "vertebrae_L5",
+        5, # vertebrae_L4",
+        5, # "vertebrae_L3",
+        5, # "vertebrae_L2",
+        5, # "vertebrae_L1",
+        5, # "vertebrae_T12",
+        5, # "vertebrae_T11",
+        5, # "vertebrae_T10",
+        5, # "vertebrae_T9",
+        5, # "vertebrae_T8",
+        5, # "vertebrae_T7",
+        10, # "vertebrae_T6",
+        10, # "vertebrae_T5",
+        10, # "vertebrae_T4",
+        10, # "vertebrae_T3",
+        10, # "vertebrae_T2",
+        10, # "vertebrae_T1",
+        1, # "heart"
+    ], dtype=torch.float32)
+    loss_DICE_CE = DiceCELoss(include_background=False, to_onehot_y=True, weight=weight.cuda())
 
     # For Tensorboard Visualization
     best_valid_loss = np.inf
     best_valid_dice = 0
     best_valid_dice_epoch = 0
-    best_valid_loss_dice = np.inf
 
     # Network training
     for epoch in range(1, 2):
