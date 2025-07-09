@@ -20,6 +20,7 @@ from PIL import Image
 from skimage.transform import resize
 from torch.utils.data import DataLoader
 from monai.transforms import Resize
+from joblib import Parallel, delayed
 
 # Own Package
 from models.unet_multidim import BasicUNet
@@ -70,6 +71,20 @@ def get_overlay(image, mask_1, mask_2, alpha=0.5):
     blended_image = image_rgb * (1 - alpha) + mask_rgb_1 * alpha + mask_rgb_2 * alpha
 
     return blended_image
+
+
+def postprocessing(x, anatomy):
+    ### Fill holes
+    x_proc = ndimage.binary_fill_holes(np.uint8(x > 0.5))
+
+    ### Remove small connected components
+    if anatomy == 'thyroid_gland':
+        n = 2
+    else:
+        n = 1
+    x_proc = remove_small_cc(x_proc, num_cc=n)
+
+    return x_proc
 
 
 def run_trainer() -> None:
@@ -176,26 +191,17 @@ def run_trainer() -> None:
             inferior_mean = 0
             anterior_mean = 0
             posterior_mean = 0
+
+            seg_img = gt_resize_transform(seg_img.squeeze(0)).squeeze().numpy()
+            pred_seg = pred_seg.squeeze().detach().cpu().numpy()
+            pred_seg = Parallel(n_jobs=5)(delayed(postprocessing)(pred_seg[anatomy_idx + 1, :, :, :], anatomy) for anatomy_idx, anatomy in enumerate(selected_organ_labels))
+            pred_seg = [torch.tensor(s) for s in pred_seg]
+            pred_seg = torch.stack(pred_seg, dim=0)
+            pred_seg = gt_resize_transform(pred_seg).numpy()
             for anatomy_idx, anatomy in enumerate(selected_organ_labels):
-
-                seg_anatomy = torch.zeros_like(seg_img)
+                seg_anatomy = np.zeros_like(seg_img)
                 seg_anatomy[seg_img == anatomy_idx + 1] = 1
-                seg_anatomy = seg_anatomy.squeeze()
-
-                pred_anatomy = pred_seg[0, anatomy_idx + 1, :, :, :]
-
-                seg_anatomy = gt_resize_transform(seg_anatomy.unsqueeze(0)).squeeze().numpy()
-                pred_anatomy = pred_resize_transform(pred_anatomy.unsqueeze(0)).squeeze().detach().cpu().numpy()
-
-                ### Fill holes
-                pred_anatomy = ndimage.binary_fill_holes(np.uint8(pred_anatomy > 0.5))
-
-                ### Remove small connected components
-                if anatomy == 'thyroid_gland':
-                    n = 2
-                else:
-                    n = 1
-                pred_anatomy = remove_small_cc(pred_anatomy, num_cc=n)
+                pred_anatomy = pred_seg[anatomy_idx, :, :, :]
 
                 bbox_seg = mask_to_bbox_volumetric(seg_anatomy)
                 bbox_pred = mask_to_bbox_volumetric(pred_anatomy)
@@ -261,6 +267,31 @@ def run_trainer() -> None:
             inferior['mean'].append(inferior_mean / len(selected_organ_labels))
             anterior['mean'].append(anterior_mean / len(selected_organ_labels))
             posterior['mean'].append(posterior_mean / len(selected_organ_labels))
+
+            if (batch_idx + 1) % 10 == 0:
+
+                # save csv
+                csv_path = os.path.join(configs['output_path'], configs['test_experiment_id'], f'results_{batch_idx + 1}.csv')
+
+                df = pd.DataFrame({
+                    'name': name_list,
+                    'left_mean': left['mean'],
+                    'right_mean': right['mean'],
+                    'superior_mean': superior['mean'],
+                    'inferior_mean': inferior['mean'],
+                    'anterior_mean': anterior['mean'],
+                    'posterior_mean': posterior['mean']
+                })
+
+                for anatomy in selected_organ_labels:
+                    df['left_' + anatomy] = left[anatomy]
+                    df['right_' + anatomy] = right[anatomy]
+                    df['superior_' + anatomy] = superior[anatomy]
+                    df['inferior_' + anatomy] = inferior[anatomy]
+                    df['anterior_' + anatomy] = anterior[anatomy]
+                    df['posterior_' + anatomy] = posterior[anatomy]
+
+                df.to_csv(csv_path, index=False)
 
     # MEAN & Std Value
     name_list.extend(['Avg', 'Std'])
