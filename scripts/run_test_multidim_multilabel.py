@@ -20,6 +20,7 @@ from PIL import Image
 from skimage.transform import resize
 from torch.utils.data import DataLoader
 from monai.transforms import Resize
+from monai.metrics import DiceMetric, SurfaceDistanceMetric
 from joblib import Parallel, delayed
 
 # Own Package
@@ -127,6 +128,8 @@ def run_trainer() -> None:
     inferior = {}
     anterior = {}
     posterior = {}
+    dice = {}
+    sd = {}
     for anatomy in selected_organ_labels:
         left[anatomy] = []
         right[anatomy] = []
@@ -134,14 +137,20 @@ def run_trainer() -> None:
         inferior[anatomy] = []
         anterior[anatomy] = []
         posterior[anatomy] = []
+        dice[anatomy] = []
+        sd[anatomy] = []
     left['mean'] = []
     right['mean'] = []
     superior['mean'] = []
     inferior['mean'] = []
     anterior['mean'] = []
     posterior['mean'] = []
+    dice['mean'] = []
+    sd['mean'] = []
 
     ### Validation phase
+    dice_metric = DiceMetric(include_background=False)
+    sd_metric = SurfaceDistanceMetric(include_background=False)
     for batch_idx, batch_data in tqdm(enumerate(test_dataloader), desc='Valid: '):
         img_rgb = batch_data['img'] / 255.0
         img_rgb = 2. * img_rgb - 1.
@@ -191,6 +200,8 @@ def run_trainer() -> None:
             inferior_mean = 0
             anterior_mean = 0
             posterior_mean = 0
+            dice_mean = 0
+            sd_mean = 0
 
             seg_img = gt_resize_transform(seg_img.squeeze(0)).squeeze().numpy()
             pred_seg = pred_seg.squeeze().detach().cpu().numpy()
@@ -202,6 +213,14 @@ def run_trainer() -> None:
                 seg_anatomy = np.zeros_like(seg_img)
                 seg_anatomy[seg_img == anatomy_idx + 1] = 1
                 pred_anatomy = pred_seg[anatomy_idx, :, :, :]
+
+                dice_anatomy = dice_metric(torch.tensor(pred_anatomy).unsqueeze(0).unsqueeze(0), torch.tensor(seg_anatomy).unsqueeze(0).unsqueeze(0)).item()
+                dice[anatomy].append(dice_anatomy)
+                dice_mean += dice_anatomy
+
+                sd_anatomy = sd_metric(torch.tensor(pred_anatomy).unsqueeze(0).unsqueeze(0), torch.tensor(seg_anatomy).unsqueeze(0).unsqueeze(0)).item()
+                sd[anatomy].append(sd_anatomy)
+                sd_mean += sd_anatomy
 
                 bbox_seg = mask_to_bbox_volumetric(seg_anatomy)
                 bbox_pred = mask_to_bbox_volumetric(pred_anatomy)
@@ -267,6 +286,8 @@ def run_trainer() -> None:
             inferior['mean'].append(inferior_mean / len(selected_organ_labels))
             anterior['mean'].append(anterior_mean / len(selected_organ_labels))
             posterior['mean'].append(posterior_mean / len(selected_organ_labels))
+            dice['mean'].append(dice_mean / len(selected_organ_labels))
+            sd['mean'].append(sd_mean / len(selected_organ_labels))
 
             if (batch_idx + 1) % 10 == 0:
 
@@ -280,7 +301,9 @@ def run_trainer() -> None:
                     'superior_mean': superior['mean'],
                     'inferior_mean': inferior['mean'],
                     'anterior_mean': anterior['mean'],
-                    'posterior_mean': posterior['mean']
+                    'posterior_mean': posterior['mean'],
+                    'dice_mean': dice['mean'],
+                    'sd_mean': sd['mean']
                 })
 
                 for anatomy in selected_organ_labels:
@@ -290,6 +313,8 @@ def run_trainer() -> None:
                     df['inferior_' + anatomy] = inferior[anatomy]
                     df['anterior_' + anatomy] = anterior[anatomy]
                     df['posterior_' + anatomy] = posterior[anatomy]
+                    df['dice_' + anatomy] = dice[anatomy]
+                    df['sd_' + anatomy] = sd[anatomy]
 
                 df.to_csv(csv_path, index=False)
 
@@ -301,6 +326,8 @@ def run_trainer() -> None:
     inferior['mean'].extend([np.nanmean(inferior['mean']), np.nanstd(inferior['mean'], ddof=1)])
     anterior['mean'].extend([np.nanmean(anterior['mean']), np.nanstd(anterior['mean'], ddof=1)])
     posterior['mean'].extend([np.nanmean(posterior['mean']), np.nanstd(posterior['mean'], ddof=1)])
+    dice['mean'].extend([np.nanmean(dice['mean']), np.nanstd(dice['mean'], ddof=1)])
+    sd['mean'].extend([np.nanmean(sd['mean']), np.nanstd(sd['mean'], ddof=1)])
 
     for anatomy_idx, anatomy in enumerate(selected_organ_labels):
         left[anatomy].extend([np.nanmean(left[anatomy]), np.nanstd(left[anatomy], ddof=1)])
@@ -309,6 +336,8 @@ def run_trainer() -> None:
         inferior[anatomy].extend([np.nanmean(inferior[anatomy]), np.nanstd(inferior[anatomy], ddof=1)])
         anterior[anatomy].extend([np.nanmean(anterior[anatomy]), np.nanstd(anterior[anatomy], ddof=1)])
         posterior[anatomy].extend([np.nanmean(posterior[anatomy]), np.nanstd(posterior[anatomy], ddof=1)])
+        dice[anatomy].extend([np.nanmean(dice[anatomy]), np.nanstd(dice[anatomy], ddof=1)])
+        sd[anatomy].extend([np.nanmean(sd[anatomy]), np.nanstd(sd[anatomy], ddof=1)])
 
     # save csv
     csv_path = os.path.join(configs['output_path'], configs['test_experiment_id'], 'results.csv')
@@ -320,7 +349,9 @@ def run_trainer() -> None:
         'superior_mean': superior['mean'],
         'inferior_mean': inferior['mean'],
         'anterior_mean': anterior['mean'],
-        'posterior_mean': posterior['mean']
+        'posterior_mean': posterior['mean'],
+        'dice_mean': dice['mean'],
+        'sd_mean': sd['mean']
     })
 
     for anatomy in selected_organ_labels:
@@ -330,6 +361,8 @@ def run_trainer() -> None:
         df['inferior_' + anatomy] = inferior[anatomy]
         df['anterior_' + anatomy] = anterior[anatomy]
         df['posterior_' + anatomy] = posterior[anatomy]
+        df['dice_' + anatomy] = dice[anatomy]
+        df['sd_' + anatomy] = sd[anatomy]
 
     df.to_csv(csv_path, index=False)
 
