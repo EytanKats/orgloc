@@ -14,18 +14,19 @@ from tqdm import tqdm
 from scipy import ndimage
 from tabulate import tabulate
 from monai.transforms import Resize
+from monai.metrics import DiceMetric, SurfaceDistanceMetric
 
 # Own Package
 from utils.tools import mask_to_bbox_volumetric
 from preprocessing.organ_labels_v2_volumetric import selected_organ_labels
 
 # Get data loader
-IMAGE_DIR = '/home/eytan/storage/staff/eytankats/data/nako_10k/images_depth'
-MASK_DIR = '/home/eytan/storage/staff/eytankats/data/nako_10k/masks_volumetric_preprocessed_v2'
-MEAN_DIR = '/home/eytan/storage/staff/eytankats/projects/orgloc/temp/'  # '/home/kats/storage/staff/eytankats/data/nako_10k/masks_volumetric_preprocessed_v2'
-LABELS_FILE = '/home/eytan/storage/staff/eytankats/data/nako_10k/labels_processed_aggregated_v2.json'
-DATA_FILE_PATH = '/home/eytan/storage/staff/eytankats/projects/orgloc/temp/test_masks_list.csv'
-OUTPUT_DIR = '/home/eytan/storage/staff/eytankats/projects/orgloc/experiments/mean_model'
+IMAGE_DIR = '/home/kats/storage/staff/eytankats/data/nako_10k/images_depth'
+MASK_DIR = '/home/kats/storage/staff/eytankats/data/nako_10k/masks_volumetric_preprocessed_v2'
+MEAN_DIR = '/home/kats/storage/staff/eytankats/projects/orgloc/temp/'  # '/home/kats/storage/staff/eytankats/data/nako_10k/masks_volumetric_preprocessed_v2'
+LABELS_FILE = '/home/kats/storage/staff/eytankats/data/nako_10k/labels_processed_aggregated_v2.json'
+DATA_FILE_PATH = '/home/kats/storage/staff/eytankats/projects/orgloc/temp/test_masks_list.csv'
+OUTPUT_DIR = '/home/kats/storage/staff/eytankats/projects/orgloc/experiments/mean_model_wdice'
 
 def remove_small_cc(mask, num_cc):
 
@@ -89,6 +90,8 @@ superior = {}
 inferior = {}
 anterior = {}
 posterior = {}
+dice = {}
+sd = {}
 for anatomy in selected_organ_labels:
     left[anatomy] = []
     right[anatomy] = []
@@ -96,14 +99,20 @@ for anatomy in selected_organ_labels:
     inferior[anatomy] = []
     anterior[anatomy] = []
     posterior[anatomy] = []
+    dice[anatomy] = []
+    sd[anatomy] = []
 left['mean'] = []
 right['mean'] = []
 superior['mean'] = []
 inferior['mean'] = []
 anterior['mean'] = []
 posterior['mean'] = []
+dice['mean'] = []
+sd['mean'] = []
 
 print('Iterate other test cases and calculate metrics...')
+dice_metric = DiceMetric(include_background=False)
+sd_metric = SurfaceDistanceMetric(include_background=False)
 for valid_id_idx, valid_id in tqdm(enumerate(valid_ids)):
 
     name_list.append(valid_id)
@@ -127,10 +136,20 @@ for valid_id_idx, valid_id in tqdm(enumerate(valid_ids)):
     inferior_mean = 0
     anterior_mean = 0
     posterior_mean = 0
+    dice_mean = 0
+    sd_mean = 0
     for anatomy_idx, anatomy in enumerate(selected_organ_labels):
 
         seg_anatomy = np.zeros_like(selected_labels_mask)
         seg_anatomy[selected_labels_mask == anatomy_idx + 1] = 1
+
+        dice_anatomy = dice_metric(torch.tensor(mean_segs[anatomy_idx]).unsqueeze(0).unsqueeze(0), torch.tensor(seg_anatomy).unsqueeze(0).unsqueeze(0)).item()
+        dice[anatomy].append(dice_anatomy)
+        dice_mean += dice_anatomy
+
+        sd_anatomy = sd_metric(torch.tensor(mean_segs[anatomy_idx]).unsqueeze(0).unsqueeze(0), torch.tensor(seg_anatomy).unsqueeze(0).unsqueeze(0)).item()
+        sd[anatomy].append(sd_anatomy)
+        sd_mean += sd_anatomy
 
         bbox_seg = mask_to_bbox_volumetric(seg_anatomy)
         bbox_pred = mask_to_bbox_volumetric(mean_segs[anatomy_idx])
@@ -168,12 +187,16 @@ for valid_id_idx, valid_id in tqdm(enumerate(valid_ids)):
         posterior[anatomy].append(posterior_anatomy)
         posterior_mean += posterior_anatomy
 
+        del seg_anatomy
+
     left['mean'].append(left_mean / len(selected_organ_labels))
     right['mean'].append(right_mean / len(selected_organ_labels))
     superior['mean'].append(superior_mean / len(selected_organ_labels))
     inferior['mean'].append(inferior_mean / len(selected_organ_labels))
     anterior['mean'].append(anterior_mean / len(selected_organ_labels))
     posterior['mean'].append(posterior_mean / len(selected_organ_labels))
+    dice['mean'].append(dice_mean / len(selected_organ_labels))
+    sd['mean'].append(sd_mean / len(selected_organ_labels))
 
     if (valid_id_idx + 1) % 10 == 0:
 
@@ -188,7 +211,9 @@ for valid_id_idx, valid_id in tqdm(enumerate(valid_ids)):
             'superior_mean': superior['mean'],
             'inferior_mean': inferior['mean'],
             'anterior_mean': anterior['mean'],
-            'posterior_mean': posterior['mean']
+            'posterior_mean': posterior['mean'],
+            'dice_mean': dice['mean'],
+            'sd_mean': sd['mean']
         })
 
         for anatomy in selected_organ_labels:
@@ -198,8 +223,13 @@ for valid_id_idx, valid_id in tqdm(enumerate(valid_ids)):
             df['inferior_' + anatomy] = inferior[anatomy]
             df['anterior_' + anatomy] = anterior[anatomy]
             df['posterior_' + anatomy] = posterior[anatomy]
+            df['dice_' + anatomy] = dice[anatomy]
+            df['sd_' + anatomy] = sd[anatomy]
 
         df.to_csv(csv_path, index=False)
+
+    del multilabel_mask
+    del selected_labels_mask
 
 # MEAN & Std Value
 name_list.extend(['Avg', 'Std'])
@@ -209,6 +239,8 @@ superior['mean'].extend([np.nanmean(superior['mean']), np.nanstd(superior['mean'
 inferior['mean'].extend([np.nanmean(inferior['mean']), np.nanstd(inferior['mean'], ddof=1)])
 anterior['mean'].extend([np.nanmean(anterior['mean']), np.nanstd(anterior['mean'], ddof=1)])
 posterior['mean'].extend([np.nanmean(posterior['mean']), np.nanstd(posterior['mean'], ddof=1)])
+dice['mean'].extend([np.nanmean(dice['mean']), np.nanstd(dice['mean'], ddof=1)])
+sd['mean'].extend([np.nanmean(sd['mean']), np.nanstd(sd['mean'], ddof=1)])
 
 for anatomy_idx, anatomy in enumerate(selected_organ_labels):
     left[anatomy].extend([np.nanmean(left[anatomy]), np.nanstd(left[anatomy], ddof=1)])
@@ -217,6 +249,8 @@ for anatomy_idx, anatomy in enumerate(selected_organ_labels):
     inferior[anatomy].extend([np.nanmean(inferior[anatomy]), np.nanstd(inferior[anatomy], ddof=1)])
     anterior[anatomy].extend([np.nanmean(anterior[anatomy]), np.nanstd(anterior[anatomy], ddof=1)])
     posterior[anatomy].extend([np.nanmean(posterior[anatomy]), np.nanstd(posterior[anatomy], ddof=1)])
+    dice[anatomy].extend([np.nanmean(dice[anatomy]), np.nanstd(dice[anatomy], ddof=1)])
+    sd[anatomy].extend([np.nanmean(sd[anatomy]), np.nanstd(sd[anatomy], ddof=1)])
 
 # save csv
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -229,7 +263,9 @@ df = pd.DataFrame({
     'superior_mean': superior['mean'],
     'inferior_mean': inferior['mean'],
     'anterior_mean': anterior['mean'],
-    'posterior_mean': posterior['mean']
+    'posterior_mean': posterior['mean'],
+    'dice_mean': dice['mean'],
+    'sd_mean': sd['mean']
 })
 
 for anatomy in selected_organ_labels:
@@ -239,6 +275,8 @@ for anatomy in selected_organ_labels:
     df['inferior_' + anatomy] = inferior[anatomy]
     df['anterior_' + anatomy] = anterior[anatomy]
     df['posterior_' + anatomy] = posterior[anatomy]
+    df['dice_' + anatomy] = dice[anatomy]
+    df['sd_' + anatomy] = sd[anatomy]
 
 df.to_csv(csv_path, index=False)
 
