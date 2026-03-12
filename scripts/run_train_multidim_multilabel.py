@@ -45,7 +45,7 @@ def run_trainer() -> None:
     configs['log_path'] = os.path.join(configs['output_path'], 'logs')
 
     wandb.init(
-        project="organs_localization",
+        project="orgloc",
         name=os.path.basename(configs['experiment_id']),
         config=configs
     )
