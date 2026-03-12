@@ -15,6 +15,7 @@ from torch.utils.data import Dataset
 from albumentations.pytorch import ToTensorV2
 
 from preprocessing.organ_labels_v2_volumetric import selected_organ_labels
+from utils.aug import apply_cloth_folding_augmentation
 
 
 class Image_Dataset(Dataset):
@@ -38,11 +39,11 @@ class Image_Dataset(Dataset):
         logging.info('{} set num: {}'.format(stage, len(self.name_list)))
 
     def get_transforms(self):
-        if self.stage == 'train':
+        if self.stage == 'training':
             transforms = A.Compose([
                 A.ToFloat(max_value=255.0),
-                # A.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.0, p=0.5),
-                A.ShiftScaleRotate(shift_limit=0.1, scale_limit=0.0, rotate_limit=15, border_mode=cv2.BORDER_CONSTANT, p=0.5),
+                # A.HorizontalFlip(p=0.5),
+                A.ShiftScaleRotate(shift_limit=0.1, scale_limit=(-0.1, 0.1), rotate_limit=10, border_mode=cv2.BORDER_CONSTANT, p=0.5),
                 A.Resize(self.img_size, self.img_size),
                 ToTensorV2(),
             ])
@@ -63,6 +64,29 @@ class Image_Dataset(Dataset):
 
         img_image = Image.open(os.path.join(self.img_path, name + '.png')).convert("RGB")
         img_data = np.array(img_image).astype(np.float32)
+
+        if self.stage == 'training':
+            # Apply cloth folding augmentation to the first channel (assuming depth is there)
+            # and then replicate it to all channels to maintain RGB format if necessary.
+            depth_channel = img_data[:, :, 0].copy()
+
+            # Use random parameters within specified ranges
+            strength = random.uniform(10, 60)
+            scale = random.uniform(50, 130)
+            num_lines = random.randint(5, 30)
+            sigma = random.randint(1, 7)
+
+            augmented_depth = apply_cloth_folding_augmentation(
+                depth_channel,
+                strength=strength,
+                scale=scale,
+                num_lines=num_lines,
+                include_clusters=True,
+                sig=sigma
+            )
+
+            # Replicate to RGB
+            img_data = np.stack([augmented_depth] * 3, axis=-1)
 
         # load multilabel mask
         multilabel_mask = nib.load(self.masks_map[name]).get_fdata()
